@@ -27,6 +27,18 @@ Protect and grow NOI by automating the industry's most tedious manual processes.
 
 6. **Advisory** — Software advisory, AI strategy, team adoption.
 
+### Go-To-Market
+- **Leading product:** LP Vetting + LP AI Outreach
+  - Input: CSV of LPs
+  - Process: AI researches each LP, vets against GP-defined criteria ("GP box"), flags fit/no-fit
+  - Output: Bulk hyper-personalized outreach drafts for qualified LPs
+  - Roadmap: HubSpot CRM integration
+- Vision: Modular platform — each automation is a standalone node, productized over time into one place
+
+### People / Prospects
+- **Bryce (Rio Cap)** — shared video feedback (`BryceRioCapFeedback.mov`), likely prospect or early customer
+
 ### Notes
 - Early stage — website not yet live as of March 2026
 - Strong positioning: not generic RE-AI, but deep vertical specificity in CRE PE workflows
+- First customers being pursued while product is still being built

@@ -1,0 +1,1545 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>OpenClaw Mission Control</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0d0d0d;
+      --panel: #141414;
+      --panel2: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #00ff88;
+      --accent-dim: rgba(0, 255, 136, 0.12);
+      --accent-glow: rgba(0, 255, 136, 0.25);
+      --text: #e0e0e0;
+      --text-dim: #666;
+      --text-mid: #999;
+      --red: #ff4444;
+      --yellow: #ffcc00;
+      --green: #00ff88;
+      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', 'Consolas', monospace;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 13px;
+      overflow: hidden;
+    }
+
+    /* ─── LAYOUT ─── */
+    #app {
+      display: flex;
+      height: 100vh;
+    }
+
+    /* ─── SIDEBAR ─── */
+    #sidebar {
+      width: 200px;
+      min-width: 200px;
+      background: var(--panel);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      padding: 0;
+      user-select: none;
+    }
+
+    #sidebar-header {
+      padding: 20px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    #sidebar-header .logo {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--accent);
+      letter-spacing: 0.05em;
+    }
+
+    #sidebar-header .subtitle {
+      font-size: 10px;
+      color: var(--text-dim);
+      margin-top: 3px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    #nav {
+      flex: 1;
+      padding: 12px 0;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 16px;
+      cursor: pointer;
+      color: var(--text-mid);
+      font-size: 12px;
+      font-weight: 400;
+      border-left: 2px solid transparent;
+      transition: all 0.12s ease;
+    }
+
+    .nav-item:hover {
+      background: var(--panel2);
+      color: var(--text);
+    }
+
+    .nav-item.active {
+      color: var(--accent);
+      background: var(--accent-dim);
+      border-left: 2px solid var(--accent);
+    }
+
+    .nav-item .icon {
+      font-size: 15px;
+      width: 20px;
+      text-align: center;
+    }
+
+    #sidebar-footer {
+      padding: 12px 16px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      margin-right: 5px;
+      box-shadow: 0 0 6px var(--accent);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ─── MAIN ─── */
+    #main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    #topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel);
+    }
+
+    #tab-title {
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--text);
+      letter-spacing: 0.04em;
+    }
+
+    #topbar-meta {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    #clock {
+      color: var(--accent);
+    }
+
+    #content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 24px;
+    }
+
+    /* ─── SPINNER ─── */
+    .spinner-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 200px;
+      color: var(--text-dim);
+      gap: 12px;
+      font-size: 12px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ─── SECTION HEADER ─── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 16px;
+    }
+
+    .section-title {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+    }
+
+    .refresh-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-dim);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 4px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      transition: all 0.12s;
+    }
+
+    .refresh-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* ─── CRON JOBS ─── */
+    .cron-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .cron-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px 20px;
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr auto auto;
+      align-items: center;
+      gap: 12px;
+      transition: border-color 0.12s;
+    }
+
+    .cron-card:hover {
+      border-color: #3a3a3a;
+    }
+
+    .cron-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+    }
+
+    .cron-schedule {
+      font-size: 11px;
+      color: var(--text-mid);
+    }
+
+    .cron-next {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .cron-channel {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-size: 10px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+
+    .badge-enabled {
+      background: rgba(0, 255, 136, 0.12);
+      color: var(--green);
+      border: 1px solid rgba(0, 255, 136, 0.3);
+    }
+
+    .badge-disabled {
+      background: rgba(100, 100, 100, 0.12);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .run-btn {
+      background: none;
+      border: 1px solid var(--border);
+      color: var(--text-mid);
+      font-family: var(--mono);
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.12s;
+    }
+
+    .run-btn:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+      background: var(--accent-dim);
+    }
+
+    .run-btn:active {
+      opacity: 0.7;
+    }
+
+    .run-btn.running {
+      color: var(--text-dim);
+      border-color: var(--border);
+      cursor: not-allowed;
+    }
+
+    /* ─── CHANNELS ─── */
+    .channel-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .channel-card {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .channel-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .dot-green { background: var(--green); box-shadow: 0 0 6px var(--green); }
+    .dot-red { background: var(--red); box-shadow: 0 0 6px var(--red); }
+    .dot-yellow { background: var(--yellow); box-shadow: 0 0 6px var(--yellow); }
+    .dot-gray { background: var(--text-dim); }
+
+    .channel-name {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      flex: 1;
+    }
+
+    .channel-status {
+      font-size: 11px;
+      padding: 2px 8px;
+      border-radius: 3px;
+      font-weight: 600;
+    }
+
+    .status-running {
+      color: var(--green);
+      background: rgba(0, 255, 136, 0.1);
+      border: 1px solid rgba(0, 255, 136, 0.25);
+    }
+
+    .status-stopped {
+      color: var(--red);
+      background: rgba(255, 68, 68, 0.1);
+      border: 1px solid rgba(255, 68, 68, 0.25);
+    }
+
+    .status-degraded {
+      color: var(--yellow);
+      background: rgba(255, 204, 0, 0.1);
+      border: 1px solid rgba(255, 204, 0, 0.25);
+    }
+
+    .channel-meta {
+      font-size: 11px;
+      color: var(--text-dim);
+    }
+
+    /* ─── RAW TEXT PANEL ─── */
+    .raw-panel {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-size: 12px;
+      color: var(--text-mid);
+      line-height: 1.6;
+      max-height: 500px;
+      overflow-y: auto;
+    }
+
+    /* ─── LOGS ─── */
+    .log-panel {
+      background: #0a0a0a;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 16px;
+      height: calc(100vh - 180px);
+      overflow-y: auto;
+      font-size: 11.5px;
+      line-height: 1.7;
+      color: #8a8a8a;
+    }
+
+    .log-panel .log-line {
+      display: block;
+    }
+
+    .log-panel .log-line:hover {
+      color: var(--text);
+      background: rgba(255,255,255,0.02);
+    }
+
+    /* Color-coded log levels */
+    .log-error { color: var(--red); }
+    .log-warn  { color: var(--yellow); }
+    .log-info  { color: #5599ff; }
+    .log-debug { color: var(--text-dim); }
+    .log-accent { color: var(--accent); }
+
+    .log-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }
+
+    .log-filename {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    /* ─── DAILY LOG VIEW ─── */
+    .log-day-block {
+      margin-bottom: 28px;
+    }
+
+    .log-day-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 0 8px;
+      border-bottom: 1px solid var(--border);
+      margin-bottom: 12px;
+    }
+
+    .log-day-title {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--accent);
+      letter-spacing: 0.03em;
+    }
+
+    .log-day-meta {
+      font-size: 10px;
+      color: var(--text-dim);
+    }
+
+    .log-hours {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .log-hour-row {
+      display: flex;
+      gap: 16px;
+      padding: 7px 10px;
+      border-radius: 5px;
+      background: var(--panel2);
+      align-items: flex-start;
+    }
+
+    .log-hour-row:hover {
+      background: #1f1f1f;
+    }
+
+    .log-hour-label {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      min-width: 56px;
+      padding-top: 2px;
+    }
+
+    .log-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .log-hour-time {
+      font-size: 11px;
+      color: var(--text-mid);
+      font-weight: 600;
+    }
+
+    .log-hour-count {
+      font-size: 9px;
+      color: var(--text-dim);
+      white-space: nowrap;
+    }
+
+    .log-hour-bullets {
+      list-style: none;
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .log-bullet {
+      font-size: 11.5px;
+      color: var(--text);
+      padding-left: 12px;
+      position: relative;
+      line-height: 1.5;
+    }
+
+    .log-bullet::before {
+      content: '›';
+      position: absolute;
+      left: 0;
+      color: var(--accent);
+    }
+
+    .log-bullet-dim {
+      color: var(--text-dim);
+    }
+
+    .log-bullet-dim::before {
+      color: var(--text-dim);
+    }
+
+    .log-bullet-error {
+      color: var(--red);
+    }
+
+    .log-bullet-error::before {
+      color: var(--red);
+    }
+
+    .log-bullet-warn {
+      color: var(--yellow);
+    }
+
+    .log-bullet-warn::before {
+      color: var(--yellow);
+    }
+
+    .log-hour-empty {
+      font-size: 11px;
+      color: var(--text-dim);
+      padding: 6px 10px;
+    }
+
+    .auto-refresh-indicator {
+      font-size: 10px;
+      color: var(--text-dim);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* ─── WEEK CALENDAR ─── */
+    .week-calendar {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .cal-day {
+      background: var(--panel2);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      min-height: 140px;
+    }
+
+    .cal-day-today {
+      border-color: var(--accent);
+      box-shadow: 0 0 8px rgba(0,255,136,0.12);
+    }
+
+    .cal-day-header {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 8px 4px 6px;
+      border-bottom: 1px solid var(--border);
+      gap: 2px;
+    }
+
+    .cal-day-name {
+      font-size: 9px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .cal-day-date {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text-mid);
+      line-height: 1;
+    }
+
+    .cal-date-today {
+      color: var(--accent);
+    }
+
+    .cal-events {
+      padding: 6px 4px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .cal-empty {
+      text-align: center;
+      color: var(--text-dim);
+      font-size: 11px;
+      padding: 12px 0;
+    }
+
+    .cal-event {
+      background: rgba(255,255,255,0.04);
+      border-left: 3px solid var(--accent);
+      border-radius: 3px;
+      padding: 4px 5px;
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      position: relative;
+    }
+
+    .cal-event:hover {
+      background: rgba(255,255,255,0.07);
+    }
+
+    .cal-event-disabled {
+      opacity: 0.4;
+    }
+
+    .cal-event-time {
+      font-size: 9px;
+      color: var(--text-dim);
+      font-weight: 600;
+    }
+
+    .cal-event-name {
+      font-size: 10px;
+      color: var(--text);
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 100%;
+    }
+
+    .cal-event-ch {
+      font-size: 9px;
+      color: var(--text-dim);
+    }
+
+    .cal-run-btn {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      background: transparent;
+      border: none;
+      color: var(--accent);
+      font-size: 9px;
+      cursor: pointer;
+      opacity: 0;
+      padding: 0 2px;
+      transition: opacity 0.15s;
+    }
+
+    .cal-event:hover .cal-run-btn {
+      opacity: 1;
+    }
+
+    .cal-run-btn:disabled {
+      color: var(--text-dim);
+      cursor: default;
+    }
+
+    /* Legend */
+    .cal-legend {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      border-top: 1px solid var(--border);
+      padding-top: 14px;
+      margin-top: 4px;
+    }
+
+    .cal-legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 10px;
+      background: var(--panel2);
+      border-radius: 5px;
+      font-size: 11px;
+    }
+
+    .cal-legend-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .cal-legend-name {
+      color: var(--text);
+      font-weight: 600;
+      min-width: 120px;
+    }
+
+    .cal-legend-sched {
+      color: var(--text-mid);
+    }
+
+    .cal-legend-next {
+      color: var(--text-dim);
+      font-size: 10px;
+    }
+
+    /* ─── ALERTS ─── */
+    .alert-placeholder {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      height: 300px;
+      gap: 12px;
+      color: var(--text-dim);
+    }
+
+    .alert-placeholder .icon-big {
+      font-size: 40px;
+      opacity: 0.4;
+    }
+
+    .alert-placeholder p {
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ─── SETTINGS ─── */
+    .settings-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .settings-section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    .settings-section-title {
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      background: var(--panel2);
+    }
+
+    .settings-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-row:last-child {
+      border-bottom: none;
+    }
+
+    .settings-key {
+      font-size: 11px;
+      color: var(--text-mid);
+    }
+
+    .settings-value {
+      font-size: 12px;
+      color: var(--accent);
+    }
+
+    /* ─── ERROR / EMPTY ─── */
+    .error-box {
+      background: rgba(255, 68, 68, 0.05);
+      border: 1px solid rgba(255, 68, 68, 0.2);
+      border-radius: 6px;
+      padding: 14px 18px;
+      font-size: 12px;
+      color: var(--red);
+      line-height: 1.6;
+    }
+
+    .empty-box {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 40px;
+      text-align: center;
+      font-size: 12px;
+      color: var(--text-dim);
+    }
+
+    /* ─── TOAST ─── */
+    #toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--panel2);
+      border: 1px solid var(--accent);
+      color: var(--accent);
+      padding: 10px 18px;
+      border-radius: 6px;
+      font-size: 12px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.2s;
+      pointer-events: none;
+      z-index: 1000;
+    }
+
+    #toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    /* ─── SCROLLBAR ─── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a3a; }
+  </style>
+</head>
+<body>
+<div id="app">
+
+  <!-- SIDEBAR -->
+  <nav id="sidebar">
+    <div id="sidebar-header">
+      <div class="logo">🤠 OpenClaw</div>
+      <div class="subtitle">Mission Control</div>
+    </div>
+    <div id="nav">
+      <div class="nav-item active" data-tab="calendar">
+        <span class="icon">📅</span>
+        <span>Calendar</span>
+      </div>
+      <div class="nav-item" data-tab="channels">
+        <span class="icon">💬</span>
+        <span>Channels</span>
+      </div>
+      <div class="nav-item" data-tab="alerts">
+        <span class="icon">🔔</span>
+        <span>Alerts</span>
+      </div>
+      <div class="nav-item" data-tab="logs">
+        <span class="icon">📋</span>
+        <span>Logs</span>
+      </div>
+      <div class="nav-item" data-tab="settings">
+        <span class="icon">⚙️</span>
+        <span>Settings</span>
+      </div>
+    </div>
+    <div id="sidebar-footer">
+      <span class="status-dot"></span> gateway online
+    </div>
+  </nav>
+
+  <!-- MAIN -->
+  <div id="main">
+    <div id="topbar">
+      <span id="tab-title">📅 Calendar</span>
+      <div id="topbar-meta">
+        <span id="clock"></span>
+        <span id="refresh-meta"></span>
+      </div>
+    </div>
+    <div id="content">
+      <div class="spinner-wrap">
+        <div class="spinner"></div>
+        <span>Loading...</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast"></div>
+
+<script>
+// ─── STATE ───────────────────────────────────────────────
+let currentTab = 'calendar';
+let refreshTimers = {};
+
+// ─── UTILS ───────────────────────────────────────────────
+function $(sel) { return document.querySelector(sel); }
+function el(tag, cls, text) {
+  const e = document.createElement(tag);
+  if (cls) e.className = cls;
+  if (text) e.textContent = text;
+  return e;
+}
+
+function showToast(msg, isErr = false) {
+  const t = $('#toast');
+  t.textContent = msg;
+  t.style.borderColor = isErr ? 'var(--red)' : 'var(--accent)';
+  t.style.color = isErr ? 'var(--red)' : 'var(--accent)';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function formatRelative(dateStr) {
+  if (!dateStr) return '—';
+  const diff = new Date(dateStr) - Date.now();
+  if (isNaN(diff)) return dateStr;
+  const abs = Math.abs(diff);
+  const s = Math.floor(abs / 1000);
+  const m = Math.floor(s / 60);
+  const h = Math.floor(m / 60);
+  const d = Math.floor(h / 24);
+  const past = diff < 0;
+  const rel = d > 0 ? `${d}d ${h % 24}h` : h > 0 ? `${h}h ${m % 60}m` : m > 0 ? `${m}m` : `${s}s`;
+  return past ? `${rel} ago` : `in ${rel}`;
+}
+
+function humanSchedule(cron, tz) {
+  if (!cron) return '—';
+  const parts = cron.trim().split(/\s+/);
+  if (parts.length < 5) return cron;
+  const [min, hour, dom, mon, dow] = parts;
+  const tzLabel = tz ? ` (${tz.replace('America/Los_Angeles','PST').replace('America/New_York','EST').replace('America/Chicago','CST')})` : '';
+
+  if (dom === '*' && mon === '*') {
+    if (dow === '*') {
+      if (min === '0' && hour !== '*') return `Daily at ${hour.padStart(2,'0')}:00${tzLabel}`;
+      if (hour === '*' && min === '0') return `Every hour${tzLabel}`;
+      if (hour === '*') return `Every hour at :${min.padStart(2,'0')}${tzLabel}`;
+      return `Daily at ${hour}:${min.padStart(2,'0')}${tzLabel}`;
+    }
+    const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    const dayNames = dow.split(',').map(d => days[parseInt(d)] || d).join(', ');
+    return `${dayNames} at ${hour.padStart(2,'0')}:${min.padStart(2,'0')}${tzLabel}`;
+  }
+  return `${cron}${tzLabel}`;
+}
+
+function colorizeLog(line) {
+  if (/error|ERROR|ERR/i.test(line)) return `<span class="log-line log-error">${escHtml(line)}</span>`;
+  if (/warn|WARN|WARNING/i.test(line)) return `<span class="log-line log-warn">${escHtml(line)}</span>`;
+  if (/info|INFO/i.test(line)) return `<span class="log-line log-info">${escHtml(line)}</span>`;
+  if (/debug|DEBUG/i.test(line)) return `<span class="log-line log-debug">${escHtml(line)}</span>`;
+  if (/openclaw|gateway|cron/i.test(line)) return `<span class="log-line log-accent">${escHtml(line)}</span>`;
+  return `<span class="log-line">${escHtml(line)}</span>`;
+}
+
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+function updateClock() {
+  const now = new Date();
+  $('#clock').textContent = now.toLocaleTimeString('en-US', {
+    hour12: false, hour:'2-digit', minute:'2-digit', second:'2-digit'
+  });
+}
+
+// ─── NAVIGATION ──────────────────────────────────────────
+document.querySelectorAll('.nav-item').forEach(item => {
+  item.addEventListener('click', () => {
+    const tab = item.dataset.tab;
+    if (tab === currentTab) return;
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    item.classList.add('active');
+    currentTab = tab;
+    // Clear all timers when switching
+    Object.values(refreshTimers).forEach(clearInterval);
+    refreshTimers = {};
+    loadTab(tab);
+  });
+});
+
+function loadTab(tab) {
+  const titles = {
+    calendar: '📅 Calendar',
+    channels: '💬 Channels',
+    alerts: '🔔 Alerts',
+    logs: '📋 Logs',
+    settings: '⚙️ Settings',
+  };
+  $('#tab-title').textContent = titles[tab] || tab;
+  $('#refresh-meta').textContent = '';
+
+  switch (tab) {
+    case 'calendar': renderCalendar(); break;
+    case 'channels': renderChannels(); break;
+    case 'alerts':   renderAlerts(); break;
+    case 'logs':     renderLogs(); break;
+    case 'settings': renderSettings(); break;
+  }
+}
+
+function setContent(html) {
+  $('#content').innerHTML = html;
+}
+
+function showSpinner() {
+  setContent(`<div class="spinner-wrap"><div class="spinner"></div><span>Loading...</span></div>`);
+}
+
+// ─── CALENDAR ────────────────────────────────────────────
+async function renderCalendar() {
+  showSpinner();
+  const data = await fetchCron();
+  if (currentTab !== 'calendar') return;
+  renderCronData(data);
+
+  // Auto-refresh every 30s
+  refreshTimers.calendar = setInterval(async () => {
+    if (currentTab !== 'calendar') return;
+    const d = await fetchCron();
+    renderCronData(d);
+  }, 30000);
+}
+
+async function fetchCron() {
+  try {
+    const r = await fetch('/api/cron');
+    return await r.json();
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+}
+
+// Returns array of {dayIndex (0=Sun), hour, minute} for a cron expr
+// dayIndex: 0-6 or null (meaning every day)
+function cronOccurrences(expr) {
+  if (!expr) return [];
+  const parts = expr.trim().split(/\s+/);
+  if (parts.length < 5) return [];
+  const [min, hour, , , dow] = parts;
+  const minute = parseInt(min) || 0;
+  const h = parseInt(hour);
+  if (isNaN(h)) return []; // can't place "every hour" jobs cleanly
+
+  if (dow === '*' || dow === '?') {
+    // Every day at this time
+    return [0,1,2,3,4,5,6].map(d => ({ dayIndex: d, hour: h, minute }));
+  }
+  // Specific days
+  return dow.split(',').map(d => ({ dayIndex: parseInt(d) % 7, hour: h, minute }));
+}
+
+function renderCronData(result) {
+  if (currentTab !== 'calendar') return;
+
+  $('#refresh-meta').textContent = `↻ auto-refresh 30s`;
+
+  if (!result.ok) {
+    setContent(`
+      <div class="section-header">
+        <span class="section-title">Calendar</span>
+        <button class="refresh-btn" onclick="renderCalendar()">↻ Refresh</button>
+      </div>
+      <div class="error-box">Failed to load cron jobs: ${escHtml(result.error || 'Unknown error')}</div>
+    `);
+    return;
+  }
+
+  let jobs = result.data;
+  if (!Array.isArray(jobs)) {
+    if (jobs && Array.isArray(jobs.jobs)) jobs = jobs.jobs;
+    else if (jobs && Array.isArray(jobs.entries)) jobs = jobs.entries;
+    else jobs = [];
+  }
+
+  // Get the current week's Sunday
+  const now = new Date();
+  const todayIndex = now.getDay(); // 0=Sun
+  const weekStart = new Date(now);
+  weekStart.setDate(now.getDate() - todayIndex);
+  weekStart.setHours(0,0,0,0);
+
+  const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  // Map jobs to day buckets
+  const dayBuckets = {0:[],1:[],2:[],3:[],4:[],5:[],6:[]};
+
+  // Accent colors per job (cycle through a palette)
+  const PALETTE = ['#00ff88','#00aaff','#ff6b35','#c77dff','#ffcc00','#ff4d6d','#4cc9f0'];
+
+  jobs.forEach((job, idx) => {
+    const schedObj = job.schedule || {};
+    const schedExpr = typeof schedObj === 'string' ? schedObj : (schedObj.expr || '');
+    const schedTz = typeof schedObj === 'object' ? (schedObj.tz || '') : '';
+    const id = String(job.id || job.name || 'unknown');
+    const name = String(job.name || job.id || 'Unnamed');
+    const enabled = job.enabled !== false;
+    const color = PALETTE[idx % PALETTE.length];
+    const nextRunMs = job.state?.nextRunAtMs || null;
+    const channel = String(job.delivery?.channel || '');
+
+    const occurrences = cronOccurrences(schedExpr);
+    for (const occ of occurrences) {
+      dayBuckets[occ.dayIndex].push({
+        id, name, enabled, color, channel,
+        hour: occ.hour, minute: occ.minute,
+        timeLabel: `${String(occ.hour).padStart(2,'0')}:${String(occ.minute).padStart(2,'0')}`,
+        nextRunMs,
+        schedExpr, schedTz,
+      });
+    }
+  });
+
+  // Sort each bucket by time
+  for (const d of Object.values(dayBuckets)) {
+    d.sort((a,b) => a.hour*60+a.minute - (b.hour*60+b.minute));
+  }
+
+  // Build week header dates
+  const weekDates = [0,1,2,3,4,5,6].map(i => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return d;
+  });
+
+  const todayStr = now.toDateString();
+
+  let html = `
+    <div class="section-header" style="margin-bottom:16px">
+      <span class="section-title">Week of ${weekStart.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}</span>
+      <button class="refresh-btn" onclick="renderCalendar()">↻ Refresh</button>
+    </div>
+    <div class="week-calendar">
+  `;
+
+  for (let d = 0; d < 7; d++) {
+    const date = weekDates[d];
+    const isToday = date.toDateString() === todayStr;
+    const events = dayBuckets[d];
+
+    html += `
+      <div class="cal-day ${isToday ? 'cal-day-today' : ''}">
+        <div class="cal-day-header">
+          <span class="cal-day-name">${DAY_SHORT[d]}</span>
+          <span class="cal-day-date ${isToday ? 'cal-date-today' : ''}">${date.getDate()}</span>
+        </div>
+        <div class="cal-events">
+    `;
+
+    if (events.length === 0) {
+      html += `<div class="cal-empty">—</div>`;
+    } else {
+      for (const ev of events) {
+        html += `
+          <div class="cal-event ${ev.enabled ? '' : 'cal-event-disabled'}" style="border-left-color:${ev.color}" title="${escHtml(ev.name)} @ ${escHtml(ev.timeLabel)}">
+            <span class="cal-event-time">${escHtml(ev.timeLabel)}</span>
+            <span class="cal-event-name">${escHtml(ev.name)}</span>
+            ${ev.channel ? `<span class="cal-event-ch">${escHtml(ev.channel)}</span>` : ''}
+            <button class="cal-run-btn" onclick="runJobCal(this,'${escHtml(ev.id)}','${escHtml(ev.name)}')">▶</button>
+          </div>
+        `;
+      }
+    }
+
+    html += `</div></div>`;
+  }
+
+  html += `</div>`;
+
+  // Job legend below
+  if (jobs.length > 0) {
+    html += `<div class="cal-legend">`;
+    jobs.forEach((job, idx) => {
+      const color = PALETTE[idx % PALETTE.length];
+      const name = String(job.name || job.id || 'Unnamed');
+      const schedObj = job.schedule || {};
+      const schedExpr = typeof schedObj === 'string' ? schedObj : (schedObj.expr || '');
+      const schedTz = typeof schedObj === 'object' ? (schedObj.tz || '') : '';
+      const nextRunMs = job.state?.nextRunAtMs || null;
+      const enabled = job.enabled !== false;
+      html += `
+        <div class="cal-legend-item">
+          <span class="cal-legend-dot" style="background:${color}"></span>
+          <span class="cal-legend-name">${escHtml(name)}</span>
+          <span class="cal-legend-sched">${escHtml(humanSchedule(schedExpr, schedTz))}</span>
+          ${nextRunMs ? `<span class="cal-legend-next">next: ${escHtml(formatRelative(new Date(nextRunMs).toISOString()))}</span>` : ''}
+          <span class="badge ${enabled ? 'badge-enabled' : 'badge-disabled'}" style="margin-left:auto">${enabled ? 'on' : 'off'}</span>
+        </div>
+      `;
+    });
+    html += `</div>`;
+  }
+
+  setContent(html);
+}
+
+async function runJobCal(btn, id, name) {
+  btn.textContent = '⏳';
+  btn.disabled = true;
+  try {
+    const r = await fetch(`/api/cron/${encodeURIComponent(id)}/run`, { method: 'POST' });
+    const data = await r.json();
+    showToast(data.ok ? `✓ "${name}" triggered` : `✗ Failed: ${data.error || 'error'}`, !data.ok);
+  } catch (e) {
+    showToast(`✗ Error: ${e.message}`, true);
+  }
+  btn.textContent = '▶';
+  btn.disabled = false;
+}
+
+async function runJob(btn, id) {
+  btn.classList.add('running');
+  btn.textContent = '⏳ Running...';
+  try {
+    const r = await fetch(`/api/cron/${encodeURIComponent(id)}/run`, { method: 'POST' });
+    const data = await r.json();
+    if (data.ok) {
+      showToast(`✓ Job "${id}" triggered`);
+    } else {
+      showToast(`✗ Failed: ${data.error || 'Unknown error'}`, true);
+    }
+  } catch (e) {
+    showToast(`✗ Error: ${e.message}`, true);
+  }
+  btn.classList.remove('running');
+  btn.textContent = '▶ Run Now';
+}
+
+// ─── CHANNELS ────────────────────────────────────────────
+async function renderChannels() {
+  showSpinner();
+  try {
+    const r = await fetch('/api/channels');
+    const data = await r.json();
+    if (currentTab !== 'channels') return;
+
+    let html = `
+      <div class="section-header">
+        <span class="section-title">Connected Channels</span>
+        <button class="refresh-btn" onclick="renderChannels()">↻ Refresh</button>
+      </div>
+    `;
+
+    const raw = data.raw || '';
+    const parsed = parseChannelStatus(raw);
+
+    if (parsed.length > 0) {
+      html += `<div class="channel-grid">`;
+      for (const ch of parsed) {
+        const dotClass = ch.status === 'running' ? 'dot-green' :
+                         ch.status === 'stopped' ? 'dot-red' :
+                         ch.status === 'degraded' ? 'dot-yellow' : 'dot-gray';
+        const statusClass = ch.status === 'running' ? 'status-running' :
+                            ch.status === 'stopped' ? 'status-stopped' :
+                            ch.status === 'degraded' ? 'status-degraded' : '';
+        html += `
+          <div class="channel-card">
+            <div class="channel-dot ${dotClass}"></div>
+            <div class="channel-name">${escHtml(ch.name)}</div>
+            <div class="channel-meta">${escHtml(ch.meta || '')}</div>
+            <span class="channel-status ${statusClass}">${escHtml(ch.status)}</span>
+          </div>
+        `;
+      }
+      html += `</div>`;
+    } else {
+      html += `<div class="raw-panel">${raw ? escHtml(raw) : 'No channel data available.'}</div>`;
+    }
+
+    setContent(html);
+  } catch (e) {
+    setContent(`<div class="error-box">Failed to load channels: ${escHtml(e.message)}</div>`);
+  }
+}
+
+function parseChannelStatus(raw) {
+  if (!raw) return [];
+  const lines = raw.split('\n');
+  const channels = [];
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (!trimmed) continue;
+
+    // Try to detect status patterns
+    let status = 'unknown';
+    if (/running|online|active|connected|✓|✅/i.test(trimmed)) status = 'running';
+    else if (/stopped|offline|disconnected|✗|❌/i.test(trimmed)) status = 'stopped';
+    else if (/degraded|warn|partial|⚠/i.test(trimmed)) status = 'degraded';
+
+    // Extract name: first word or token that looks like a channel name
+    const nameMatch = trimmed.match(/^([a-zA-Z0-9_\-]+)/);
+    if (nameMatch && status !== 'unknown') {
+      channels.push({
+        name: nameMatch[1],
+        status,
+        meta: trimmed.replace(nameMatch[1], '').trim(),
+      });
+    }
+  }
+
+  return channels;
+}
+
+// ─── ALERTS ──────────────────────────────────────────────
+function renderAlerts() {
+  setContent(`
+    <div class="section-header">
+      <span class="section-title">Alerts</span>
+    </div>
+    <div class="alert-placeholder">
+      <div class="icon-big">🔔</div>
+      <p>Alerts from Discord <strong style="color:var(--accent)">#alerts</strong> will appear here.</p>
+      <p style="margin-top:4px;font-size:11px">No alerts yet.</p>
+    </div>
+  `);
+}
+
+// ─── LOGS ─────────────────────────────────────────────────
+async function renderLogs() {
+  showSpinner();
+  await fetchAndRenderLogs();
+
+  // Auto-refresh every 30s
+  refreshTimers.logs = setInterval(async () => {
+    if (currentTab !== 'logs') return;
+    await fetchAndRenderLogs(true);
+  }, 30000);
+}
+
+async function fetchAndRenderLogs(isRefresh = false) {
+  try {
+    const r = await fetch('/api/logs');
+    const data = await r.json();
+    if (currentTab !== 'logs') return;
+
+    $('#refresh-meta').textContent = `↻ auto-refresh 30s`;
+
+    let html = `
+      <div class="section-header">
+        <span class="section-title">Activity Log</span>
+        <button class="refresh-btn" onclick="fetchAndRenderLogs()">↻ Refresh</button>
+      </div>
+    `;
+
+    if (!data.ok || !data.days?.length) {
+      html += `<div class="error-box">${escHtml(data.error || 'No log data found')}</div>`;
+      setContent(html);
+      return;
+    }
+
+    for (const day of data.days) {
+      const dateLabel = formatDayLabel(day.date);
+      html += `
+        <div class="log-day-block">
+          <div class="log-day-header">
+            <span class="log-day-title">📅 ${escHtml(dateLabel)}</span>
+            <span class="log-day-meta">${day.totalEvents} events</span>
+          </div>
+          <div class="log-hours">
+      `;
+
+      if (!day.hours.length) {
+        html += `<div class="log-hour-empty">No notable activity</div>`;
+      }
+
+      for (const hour of day.hours) {
+        const levelCounts = {};
+        for (const e of hour.entries) {
+          levelCounts[e.level] = (levelCounts[e.level] || 0) + 1;
+        }
+        const hasError = levelCounts['ERROR'] > 0;
+        const hasWarn = levelCounts['WARN'] > 0;
+        const dotColor = hasError ? 'var(--red)' : hasWarn ? 'var(--yellow)' : 'var(--accent)';
+
+        html += `
+          <div class="log-hour-row">
+            <div class="log-hour-label">
+              <span class="log-dot" style="background:${dotColor}"></span>
+              <span class="log-hour-time">${escHtml(hour.hour)}</span>
+              <span class="log-hour-count">${hour.count} events</span>
+            </div>
+            <ul class="log-hour-bullets">
+        `;
+
+        if (hour.summary.length === 0) {
+          html += `<li class="log-bullet log-bullet-dim">Routine activity (connections, polling)</li>`;
+        } else {
+          for (const bullet of hour.summary) {
+            const isError = bullet.startsWith('Error:');
+            const isWarn = bullet.startsWith('Warning:');
+            const cls = isError ? 'log-bullet-error' : isWarn ? 'log-bullet-warn' : '';
+            html += `<li class="log-bullet ${cls}">${escHtml(bullet)}</li>`;
+          }
+        }
+
+        html += `</ul></div>`;
+      }
+
+      html += `</div></div>`; // close log-hours + log-day-block
+    }
+
+    setContent(html);
+  } catch (e) {
+    if (currentTab !== 'logs') return;
+    setContent(`<div class="error-box">Failed to load logs: ${escHtml(e.message)}</div>`);
+  }
+}
+
+function formatDayLabel(dateStr) {
+  const today = new Date().toISOString().slice(0, 10);
+  const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+  if (dateStr === today) return `Today — ${dateStr}`;
+  if (dateStr === yesterday) return `Yesterday — ${dateStr}`;
+  return dateStr;
+}
+
+// ─── SETTINGS ────────────────────────────────────────────
+async function renderSettings() {
+  showSpinner();
+  try {
+    const r = await fetch('/api/config');
+    const data = await r.json();
+    if (currentTab !== 'settings') return;
+
+    let html = `
+      <div class="section-header">
+        <span class="section-title">Configuration</span>
+        <button class="refresh-btn" onclick="renderSettings()">↻ Refresh</button>
+      </div>
+      <div class="settings-grid">
+    `;
+
+    if (!data.ok || (!data.data && !data.raw)) {
+      html += `<div class="error-box">${escHtml(data.error || 'Failed to load config')}</div>`;
+      if (data.raw) html += `<div class="raw-panel" style="margin-top:12px">${escHtml(data.raw)}</div>`;
+    } else if (data.raw) {
+      html += `<div class="raw-panel">${escHtml(data.raw)}</div>`;
+    } else {
+      const cfg = data.data;
+
+      // Gateway section
+      const gatewayFields = extractFields(cfg, ['port', 'gateway.port', 'server.port', 'gatewayPort']);
+      html += renderSettingsSection('Gateway', [
+        ['Port', cfg.port || cfg.gateway?.port || cfg.server?.port || '3000'],
+        ['Host', cfg.host || cfg.gateway?.host || 'localhost'],
+        ['Version', cfg.version || cfg.gateway?.version || '—'],
+      ]);
+
+      // Channels section
+      const channels = cfg.channels || cfg.activeChannels || {};
+      if (typeof channels === 'object' && Object.keys(channels).length) {
+        const rows = Object.entries(channels).map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v).slice(0,60) : String(v)]);
+        html += renderSettingsSection('Active Channels', rows);
+      }
+
+      // Model section
+      const modelFields = [
+        ['Default Model', cfg.model || cfg.defaultModel || cfg.agent?.model || '—'],
+        ['Thinking', cfg.thinking || cfg.agent?.thinking || '—'],
+      ];
+      html += renderSettingsSection('Model', modelFields);
+
+      // Dump remaining top-level keys
+      const shown = new Set(['port', 'host', 'version', 'channels', 'activeChannels', 'model', 'defaultModel', 'agent', 'thinking', 'gateway', 'server']);
+      const remaining = Object.entries(cfg).filter(([k]) => !shown.has(k)).slice(0, 20);
+      if (remaining.length) {
+        html += renderSettingsSection('Other', remaining.map(([k, v]) => [k, typeof v === 'object' ? JSON.stringify(v).slice(0,80) : String(v)]));
+      }
+    }
+
+    html += `</div>`;
+    setContent(html);
+  } catch (e) {
+    setContent(`<div class="error-box">Failed to load config: ${escHtml(e.message)}</div>`);
+  }
+}
+
+function extractFields(obj, paths) {
+  for (const p of paths) {
+    const parts = p.split('.');
+    let cur = obj;
+    for (const part of parts) { cur = cur?.[part]; }
+    if (cur !== undefined) return cur;
+  }
+  return null;
+}
+
+function renderSettingsSection(title, rows) {
+  let html = `<div class="settings-section"><div class="settings-section-title">${escHtml(title)}</div>`;
+  for (const [k, v] of rows) {
+    if (v === '—' || v === undefined || v === null) continue;
+    html += `<div class="settings-row"><span class="settings-key">${escHtml(String(k))}</span><span class="settings-value">${escHtml(String(v))}</span></div>`;
+  }
+  html += `</div>`;
+  return html;
+}
+
+// ─── CLOCK & INIT ─────────────────────────────────────────
+setInterval(updateClock, 1000);
+updateClock();
+loadTab('calendar');
+</script>
+</body>
+</html>

@@ -38,3 +38,17 @@ Skills are shared. Your setup is yours. Keeping them apart means you can update 
 ---
 
 Add whatever helps you do your job. This is your cheat sheet.
+
+### Discord
+
+- Server ID: 1483635084614701252
+- User ID: 1483630501376954459
+- Bot: @clawbot
+
+**Channels:**
+- #clyde → 1483637874858393672 (main chat)
+- #briefs → 1483637876129403012 (finished work)
+- #outreach → 1483637878117503057 (LP vetting + outreach)
+- #docs → 1483637879036051640 (document abstraction)
+- #alerts → 1483637881116430366 (proactive alerts)
+- #logs → 1483637882668318861 (background activity)
