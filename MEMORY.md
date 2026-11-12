@@ -55,5 +55,5 @@
 ## Open TODOs
 - [ ] Rotate Discord bot token (shared in Telegram chat on 2026-03-17)
 - [ ] Enable Message Content Intent fully in Discord Dev Portal
-- [ ] Nightly memory consolidation cron job
+- [x] Nightly memory consolidation cron job (running as of Nov 2026)
 - [ ] Nightly auto-commit + push workspace to GitHub
