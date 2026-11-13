@@ -45,6 +45,8 @@
 ## Cron Jobs
 - **CRE Daily News**: Daily 8AM PST → Discord #alerts
   - Job ID: cc786bdc-ea0c-4c2c-9db6-1fa6eb4311ca
+- **Nightly Memory Consolidation**: Nightly (runs ~10PM PST), isolated subagent
+  - Job ID: abe08a8f-66cb-4f71-83a4-7fa3cbf343e7
 
 ## My Preferences & Style
 - Dark mode everything
